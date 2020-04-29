@@ -6,7 +6,7 @@ import TitleScene from "./title";
 import regeneratorRuntime from "regenerator-runtime"; // async requires this
 
 window.onload = async function() {
-	const canvas = init();
+	const canvas = init({fitScreen: true});
 
 	LoadingScene.createAndEnter(TitleScene, TitleScene);
 

@@ -2,7 +2,7 @@ import {Color} from "three";
 
 import Scene from "fewd/scene";
 import {Label} from "fewd/uielements";
-import {List} from "fewd/layouts";
+import {List, setupLayoutExpression} from "fewd/layouts";
 import Element from "fewd/element";
 import Easing from "fewd/easing";
 import assets from "fewd/loading";
@@ -17,8 +17,9 @@ export default class TitleScene extends Scene {
     super();
 		this.UIScene.background = new Color("#002");
 
-		const list = new List(true, 0, {y: 320});
+		const list = new List(true, 0);
 		this.UIScene.add(list);
+		setupLayoutExpression(list, {y: () => this.height / 3});
 
 		list.add(new Label("Dimensional", {font: "72px 'HiraKakuProN-W3'", fillStyle: "#eee"}));
 		const campaign = new Label("Campaign", {font: "48px 'HiraKakuProN-W3'", fillStyle: "#eee"});

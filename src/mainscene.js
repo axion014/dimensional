@@ -17,31 +17,31 @@ export default class MainScene extends Scene {
 		this.UIScene.background = new Color("#002");
 		this.threePasses.push(new SMAAPass());
 
-		const gameview = new Screen({x: 0, y: 240, width: 640, height: 480});
+		const gameview = new Screen();
 		const gamespace = gameview.content.UIScene;
 		gamespace.background = new Color("#113");
 		this.UIScene.add(gameview);
 		this.gameview = gameview;
 
 		const gridX = new Infiniteof(() =>
-			createMeshLine([0, -240, 0, 240], {color: '#777', lineWidth: 2}, true),
+			createMeshLine([0, -gameview.height / 2, 0, gameview.height / 2], {color: '#777', lineWidth: 2}, true),
 			new Vector2(72, 0), {});
 		gridX.z = -1;
     gamespace.add(gridX);
-		gridX.addEventListener('update', () => this.y = gameview.scroll.y);
+		gridX.addEventListener('render', () => this.y = gameview.scroll.y);
 		const gridY = new Infiniteof(() =>
-			createMeshLine([-320, 0, 320, 0], {color: '#777', lineWidth: 2}, true),
+			createMeshLine([-gameview.width / 2, 0, gameview.width / 2, 0], {color: '#777', lineWidth: 2}, true),
 			new Vector2(0, 72), {});
 		gridY.z = -1;
 		gamespace.add(gridY);
-		gridY.addEventListener('update', () => this.x = gameview.scroll.x);
+		gridY.addEventListener('render', () => this.x = gameview.scroll.x);
 
-		this.dimensionX = new Label(options.x, {x: 0, y: 24, fillStyle: "#eee"});
-		this.dimensionY = new Label(options.y, {x: -296, y: 240, rotation: Math.PI / 2, fillStyle: "#eee"});
+		this.dimensionX = new Label(options.x, {y: 24, fillStyle: "#eee"});
+		this.dimensionY = new Label(options.y, {rotation: Math.PI / 2, fillStyle: "#eee"});
 		this.UIScene.add(this.dimensionX);
 		this.UIScene.add(this.dimensionY);
 
-		this.dimensionList = new List(true, 20, {x: 0, y: -20});
+		this.dimensionList = new List(true, 20, {y: -20});
 		this.UIScene.add(this.dimensionList);
 
 		gamespace.xaxis = options.x;
@@ -56,15 +56,14 @@ export default class MainScene extends Scene {
 			group.height = 32;
 			this.dimensionList.add(group);
 			group.gauge = new DimensionalGauge({
-				fillColor: "#113", gaugeColor: "#226", strokeWidth: 3, cornerRadius: 10,
-				x: 65, width: 480, height: 20,
+				fillColor: "#113", gaugeColor: "#226", strokeWidth: 3, cornerRadius: 10, height: 20,
 				value: 0, minValue: v.min, maxValue: v.max
 			});
 			group.add(group.gauge);
 			if (k === "time") {
-				const pause = new Label("", {x: -305, font: '24px "Font Awesome 5 Free"'});
-				const normal = new Label("", {x: -270, font: '24px "Font Awesome 5 Free"'});
-				const ff = new Label("", {x: -235, font: '24px "Font Awesome 5 Free"'});
+				const pause = new Label("", {x: 15, font: '24px "Font Awesome 5 Free"'});
+				const normal = new Label("", {x: 50, font: '24px "Font Awesome 5 Free"'});
+				const ff = new Label("", {x: 85, font: '24px "Font Awesome 5 Free"'});
 				group.add(pause);
 				group.add(normal);
 				group.add(ff);
@@ -89,7 +88,7 @@ export default class MainScene extends Scene {
 					group.gauge.value += speed * e.deltaTime / 1000;
 				});
 			} else {
-				group.add(new Label(k, {x: -305, fillStyle: "#eee"}));
+				group.add(new Label(k, {x: 15, fillStyle: "#eee"}));
 			}
 			gamespace.parametricDimensions[k] = group;
 		}
@@ -100,15 +99,14 @@ export default class MainScene extends Scene {
 			this.dimensionList.add(group);
 			if (k === gamespace.xaxis || k === gamespace.yaxis) group.visible = false;
 			group.gauge = new DimensionalGauge({
-				fillColor: "#113", gaugeColor: "#226", strokeWidth: 3, cornerRadius: 10,
-				x: 65, width: 480, height: 20,
+				fillColor: "#113", gaugeColor: "#226", strokeWidth: 3, cornerRadius: 10, height: 20,
 				value: 0, minValue: v.min, maxValue: v.max,
 			});
 			group.add(group.gauge);
 
-			group.add(new Label(k, {x: -305, fillStyle: "#eee"}));
-			const toX = new Label("𝓧", {x: -270, font: '13px "Font Awesome 5 Free"', fillStyle: "#eee"});
-			const toY = new Label("𝓨", {x: -235, font: '13px "Font Awesome 5 Free"', fillStyle: "#eee"});
+			group.add(new Label(k, {x: 15, fillStyle: "#eee"}));
+			const toX = new Label("𝓧", {x: 50, font: '13px "Font Awesome 5 Free"', fillStyle: "#eee"});
+			const toY = new Label("𝓨", {x: 85, font: '13px "Font Awesome 5 Free"', fillStyle: "#eee"});
 			group.add(toX);
 			group.add(toY);
 			((k, group) => {
@@ -144,6 +142,24 @@ export default class MainScene extends Scene {
 		for (const d of options.foundations) {
 			gamespace.add(new Foundation({dimensions: d}));
 		}
+
+		this.addEventListener('render', e => {
+			if (e.resized) {
+				const w = e.scene.width, h = e.scene.height;
+				gameview.y = h / 4;
+				gameview.width = w;
+				gameview.height = h / 2;
+				gridX.refresh();
+				gridY.refresh();
+				this.dimensionY.x = -w / 2 + 24;
+				this.dimensionY.y = h / 4;
+				for (const child of this.dimensionList.children) {
+					child.position.x = -w / 2;
+					child.gauge.x = w / 2 + 65;
+					child.gauge.width = w - 160;
+				}
+			}
+		});
 
 		console.log(gamespace);
   }
