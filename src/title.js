@@ -15,6 +15,7 @@ const revealedEvent = {type: "revealed"};
 export default class TitleScene extends Scene {
 	constructor() {
     super();
+		this.threePasses[0].enabled = false;
 		this.UIScene.background = new Color("#002");
 
 		const list = new List(true, 0);

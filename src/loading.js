@@ -18,6 +18,7 @@ export default class LoadingScene extends Scene {
 
 	constructor(list, nextScene, ...nextSceneArguments) {
 		super();
+		this.threePasses[0].enabled = false;
 		this.UIScene.add(this.label);
 		this.nextScene = nextScene;
 		this.nextSceneArguments = nextSceneArguments;

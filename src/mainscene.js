@@ -15,9 +15,11 @@ export default class MainScene extends Scene {
 	constructor(options) {
     super();
 		this.UIScene.background = new Color("#002");
+		this.threePasses[0].enabled = false;
 		this.threePasses.push(new SMAAPass());
 
 		const gameview = new Screen();
+		gameview.content.threePasses[0].enabled = false;
 		const gamespace = gameview.content.UIScene;
 		gamespace.background = new Color("#113");
 		this.UIScene.add(gameview);
