@@ -26,18 +26,36 @@ export default class MainScene extends Scene {
 		this.UIScene.add(gameview);
 		this.gameview = gameview;
 
+		let currentPointer, previousX, previousY;
+
+		gameview.addEventListener('pointstart', e => {
+			currentPointer = e.identifier;
+			previousX = e.localX;
+			previousY = e.localY;
+			e.startTracking();
+		});
+
+		gameview.addEventListener('pointmove', e => {
+			if (e.identifier === currentPointer) {
+				gameview.scroll.x -= e.localX - previousX;
+				gameview.scroll.y -= e.localY - previousY;
+				previousX = e.localX;
+				previousY = e.localY;
+			}
+		});
+
 		const gridX = new Infiniteof(() =>
 			createMeshLine([0, -gameview.height / 2, 0, gameview.height / 2], {color: '#777', lineWidth: 2}, true),
 			new Vector2(72, 0), {});
 		gridX.z = -1;
     gamespace.add(gridX);
-		gridX.addEventListener('render', () => this.y = gameview.scroll.y);
+		gridX.addEventListener('render', () => gridX.y = gameview.scroll.y);
 		const gridY = new Infiniteof(() =>
 			createMeshLine([-gameview.width / 2, 0, gameview.width / 2, 0], {color: '#777', lineWidth: 2}, true),
 			new Vector2(0, 72), {});
 		gridY.z = -1;
 		gamespace.add(gridY);
-		gridY.addEventListener('render', () => this.x = gameview.scroll.x);
+		gridY.addEventListener('render', () => gridY.x = gameview.scroll.x);
 
 		this.dimensionX = new Label(options.x, {y: 24, fillStyle: "#eee"});
 		this.dimensionY = new Label(options.y, {rotation: Math.PI / 2, fillStyle: "#eee"});
