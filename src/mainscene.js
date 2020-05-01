@@ -22,6 +22,7 @@ export default class MainScene extends Scene {
 		gameview.content.threePasses[0].enabled = false;
 		const gamespace = gameview.content.UIScene;
 		gamespace.background = new Color("#113");
+		gamespace.dimensionalElements = [];
 		this.UIScene.add(gameview);
 		this.gameview = gameview;
 
@@ -86,9 +87,9 @@ export default class MainScene extends Scene {
 				});
 				pause.interactive = normal.interactive = ff.interactive = true;
 				pause.dispatchEvent({type: "pointstart"});
-				group.gauge.addEventListener("update", e => {
-					group.gauge.value += speed * e.deltaTime / 1000;
-				});
+				(gauge => {
+					gauge.addEventListener("update", e => gauge.value += speed * e.deltaTime / 1000);
+				})(group.gauge);
 			} else {
 				group.add(new Label(k, {x: 15, fillStyle: "#eee"}));
 			}
@@ -112,6 +113,11 @@ export default class MainScene extends Scene {
 			group.add(toX);
 			group.add(toY);
 			((k, group) => {
+				group.gauge.addEventListener('changed', () => {
+					if (k !== gamespace.xaxis && k !== gamespace.yaxis) {
+						for (const e of gamespace.dimensionalElements) e.dimensionNeedsUpdate = true;
+					}
+				});
 				toX.addEventListener("pointstart", () => {
 					console.log(k, group.visible, this.pointcaptured)
 					if (!group.visible || this.pointcaptured) return;
@@ -173,8 +179,9 @@ export default class MainScene extends Scene {
 
 class DimensionalGauge extends Gauge {
 	constructor(options) {
-		options = Object.assign({point: {}, draggable: true}, options);
+		options = Object.assign({point: {}}, options);
 		super(options);
+		this.interactive = true;
 		options.point = Object.assign({radius: this.height * 0.6, strokeWidth: 10, fillColor: "#cc6"}, options.point);
 		this.point = new Ellipse(options.point);
 		this.label = new Label("", {font: "16px 'HiraKakuProN-W3'", fillStyle: "#eee"});

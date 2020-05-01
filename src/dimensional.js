@@ -17,28 +17,14 @@ export class DimensionalElement extends Element {
 					typeof this.parent.yaxis !== "string" ||
 					!this.parent.spatialDimensions ||
 					!this.parent.parametricDimensions) throw new Error("Wrong parent");
+			this._parent = this.parent;
+			this.parent.dimensionalElements.push(this);
 			this.dimensionNeedsUpdate = true;
 			this.update();
 		});
-		this.addEventListener('render', () => {
-			if (this.dimensionNeedsUpdate) {
-				if (this.existsOnCurrentConfiguration()) {
-					this.x = this.getDimension(this.parent.xaxis);
-					this.y = this.getDimension(this.parent.yaxis);
-
-					this.nativeContent.visible = this.depth < 1;
-					this.selfOpacity = 1 - this.depth;
-					this.nativeContent.left.x = -this.depth * BLURRING_RATE;
-					this.nativeContent.right.x = this.depth * BLURRING_RATE;
-
-					// only either instance need to be updated because the material is shared
-					if (typeof this.updateColor === "function") this.updateColor(this.nativeContent.left.fillColor);
-				} else {
-					this.nativeContent.visible = false;
-				}
-
-				this.dimensionNeedsUpdate = false;
-			}
+		this.addEventListener('removed', () => {
+			this._parent.dimensionalElements.pop(this);
+			this._parent = undefined;
 		});
 	}
 
@@ -82,15 +68,34 @@ export class DimensionalElement extends Element {
 		if (this.dimensionNeedsUpdate) {
 			if (this.existsOnCurrentConfiguration()) {
 				this.expandDimensions();
-
-				// calculate depth
-				const diffs = [];
-				for (const k of Object.keys(this.parent.spatialDimensions)) {
-					if (k === this.parent.xaxis || k === this.parent.yaxis || k === "time") continue;
-					diffs.push(this.parent.spatialDimensions[k].gauge.value - this.getDimension(k))
-				}
-				this.depth = Math.hypot.apply(null, diffs) * VEILING_COEFFICIENT;
 			}
+			const updateVisual = () => {
+				if (this.existsOnCurrentConfiguration()) {
+					// calculate depth
+					const diffs = [];
+					for (const k of Object.keys(this.parent.spatialDimensions)) {
+						if (k === this.parent.xaxis || k === this.parent.yaxis) continue;
+						diffs.push(this.parent.spatialDimensions[k].gauge.value - this.getDimension(k))
+					}
+					const depth = Math.hypot.apply(null, diffs) * VEILING_COEFFICIENT;
+
+					this.x = this.getDimension(this.parent.xaxis);
+					this.y = this.getDimension(this.parent.yaxis);
+
+					this.nativeContent.visible = depth < 1;
+					this.selfOpacity = 1 - depth;
+					this.nativeContent.left.x = -depth * BLURRING_RATE;
+					this.nativeContent.right.x = depth * BLURRING_RATE;
+
+					// only either instance need to be updated because the material is shared
+					if (typeof this.updateColor === "function") this.updateColor(this.nativeContent.left.fillColor, depth);
+				} else {
+					this.nativeContent.visible = false;
+				}
+				this.removeEventListener('render', updateVisual);
+			};
+			this.addEventListener('render', updateVisual);
+			this.dimensionNeedsUpdate = false;
 		}
 	}
 }
@@ -103,8 +108,8 @@ export class WayPoint extends DimensionalElement {
 		this.addContent(new Ellipse(options));
 	}
 
-	updateColor(fillColor) {
-		fillColor.setHSL(0.11, Math.max(0.1 - this.depth * 0.1, 0), 0.48);
+	updateColor(fillColor, depth) {
+		fillColor.setHSL(0.11, Math.max(0.1 - depth * 0.1, 0), 0.48);
 	}
 }
 
@@ -116,7 +121,7 @@ export class Foundation extends DimensionalElement {
 		this.addContent(new Ellipse(options));
 	}
 
-	updateColor(fillColor) {
-		fillColor.setHSL(0, Math.max(0.3 - this.depth * 0.3, 0), 0.48);
+	updateColor(fillColor, depth) {
+		fillColor.setHSL(0, Math.max(0.3 - depth * 0.3, 0), 0.48);
 	}
 }
