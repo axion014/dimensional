@@ -7,6 +7,7 @@ import Element from "fewd/element";
 import Easing from "fewd/easing";
 import assets from "fewd/loading";
 
+import LoadingScene from "./loading";
 import MainScene from "./mainscene";
 
 const hiddenEvent = {type: "hidden"};
@@ -91,21 +92,36 @@ export default class TitleScene extends Scene {
 			return arr;
 		}
 
-		const chapters = makeLabels([
-			"Chapter Ⅰ"
-		], 36);
-		const chapter_1 = makeLabels([
-			"Stage 1"
-		], 24);
+		function registerStages(stages) {
+			const labels = [];
+			for (const content of stages) {
+				const label = new Label(content.name, {
+					font: `${content.fontSize}px 'HiraKakuProN-W3'`,
+					fillStyle: "#eee"
+				});
+				if (content.type === "chapter") {
+					const addChild = () => {
+						addChildItem(label, registerStages(content.content));
+						label.removeEventListener('added', addChild);
+					};
+					label.addEventListener('added', addChild);
+				} else if (content.type === "stage") {
+					let currentPointer;
+					label.addEventListener('pointstart', e => currentPointer = e.identifier);
+					label.addEventListener('pointend', e => {
+						if (e.identifier === currentPointer) {
+							LoadingScene.createAndEnter({
+								STAGE: {[content.content]: `./data/stages/${content.content}.min.json`}
+							}, MainScene, content.content);
+						}
+					});
+				}
+				labels.push(label);
+			}
+			return labels;
+		}
 
-		addChildItem(campaign, chapters);
-		addChildItem(chapters[0], chapter_1);
-
-		const registerStage = (label, id) => {
-			label.addEventListener('pointend', () => MainScene.createAndEnter(assets.JSON.stages[id]));
-		};
-
-		registerStage(chapter_1[0], "1-1");
+		addChildItem(campaign, registerStages(assets.JSON.stages));
 
 		list.add(new Label("Free Play", {font: "48px 'HiraKakuProN-W3'", fillStyle: "#eee"}));
 		list.add(new Label("Map Editor", {font: "48px 'HiraKakuProN-W3'", fillStyle: "#eee"}));
@@ -113,7 +129,7 @@ export default class TitleScene extends Scene {
 	}
 	static requiredResources = {
 		JSON: {
-			stages: "data/stages.json"
+			stages: "data/stages.min.json"
 		}
 	};
 }

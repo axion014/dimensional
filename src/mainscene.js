@@ -6,14 +6,18 @@ import {Label, Gauge, Screen} from "fewd/uielements";
 import Easing from "fewd/easing";
 import {Ellipse} from "fewd/geometries";
 import {List} from "fewd/layouts";
+import assets from "fewd/loading";
 import Infiniteof from "fewd/infiniteof";
 import {createMeshLine} from "fewd/threeutil";
 
-import {Foundation, WayPoint} from "./dimensional";
+import {Foundation, WayPoint, Unit} from "./dimensional";
 
 export default class MainScene extends Scene {
-	constructor(options) {
+	constructor(stageID) {
     super();
+
+		const stage = assets.STAGE[stageID];
+
 		this.UIScene.background = new Color("#002");
 		this.threePasses[0].enabled = false;
 		this.threePasses.push(new SMAAPass());
@@ -57,22 +61,22 @@ export default class MainScene extends Scene {
 		gamespace.add(gridY);
 		gridY.addEventListener('render', () => gridY.x = gameview.scroll.x);
 
-		this.dimensionX = new Label(options.x, {y: 24, fillStyle: "#eee"});
-		this.dimensionY = new Label(options.y, {rotation: Math.PI / 2, fillStyle: "#eee"});
+		this.dimensionX = new Label(stage.x, {y: 24, fillStyle: "#eee"});
+		this.dimensionY = new Label(stage.y, {rotation: Math.PI / 2, fillStyle: "#eee"});
 		this.UIScene.add(this.dimensionX);
 		this.UIScene.add(this.dimensionY);
 
 		this.dimensionList = new List(true, 20, {y: -20});
 		this.UIScene.add(this.dimensionList);
 
-		gamespace.xaxis = options.x;
-		gamespace.yaxis = options.y;
+		gamespace.xaxis = stage.x;
+		gamespace.yaxis = stage.y;
 		gamespace.spatialDimensions = {};
 		gamespace.parametricDimensions = {};
 		let speed;
 
-		for (const k of Object.keys(options.parametricDimensions)) {
-			const v = options.parametricDimensions[k];
+		for (const k of Object.keys(stage.parametricDimensions)) {
+			const v = stage.parametricDimensions[k];
 			const group = new Group();
 			group.height = 32;
 			this.dimensionList.add(group);
@@ -81,6 +85,11 @@ export default class MainScene extends Scene {
 				value: 0, minValue: v.min, maxValue: v.max
 			});
 			group.add(group.gauge);
+			((k, gauge) => {
+				gauge.addEventListener('changed', () => {
+					for (const e of gamespace.dimensionalElements) e.changedParameters.add(k);
+				});
+			})(k, group.gauge);
 			if (k === "time") {
 				const pause = new Label("", {x: 15, font: '24px "Font Awesome 5 Free"'});
 				const normal = new Label("", {x: 50, font: '24px "Font Awesome 5 Free"'});
@@ -113,8 +122,8 @@ export default class MainScene extends Scene {
 			}
 			gamespace.parametricDimensions[k] = group;
 		}
-		for (const k of Object.keys(options.spatialDimensions)) {
-			const v = options.spatialDimensions[k];
+		for (const k of Object.keys(stage.spatialDimensions)) {
+			const v = stage.spatialDimensions[k];
 			const group = new Group();
 			group.height = 32;
 			this.dimensionList.add(group);
@@ -133,7 +142,7 @@ export default class MainScene extends Scene {
 			((k, group) => {
 				group.gauge.addEventListener('changed', () => {
 					if (k !== gamespace.xaxis && k !== gamespace.yaxis) {
-						for (const e of gamespace.dimensionalElements) e.dimensionNeedsUpdate = true;
+						for (const e of gamespace.dimensionalElements) e.depthNeedsUpdate = true;
 					}
 				});
 				toX.addEventListener("pointstart", () => {
@@ -162,11 +171,14 @@ export default class MainScene extends Scene {
 			gamespace.spatialDimensions[k] = group;
 		}
 
-		for (const d of options.waypoints) {
+		for (const d of stage.waypoints) {
 			gamespace.add(new WayPoint({dimensions: d}));
 		}
-		for (const d of options.foundations) {
+		for (const d of stage.foundations) {
 			gamespace.add(new Foundation({dimensions: d}));
+		}
+		for (const d of stage.units) {
+			gamespace.add(new Unit({dimensions: d, z: 0.001}));
 		}
 
 		this.addEventListener('render', e => {

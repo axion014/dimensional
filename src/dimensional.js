@@ -1,7 +1,7 @@
 import {Vector3, Group} from "three";
 
 import Element from "fewd/element";
-import {Ellipse} from "fewd/geometries";
+import {Ellipse, SymmetricTriangle} from "fewd/geometries";
 import {define} from "fewd/utils";
 
 const VEILING_COEFFICIENT = 0.01;
@@ -19,7 +19,7 @@ export class DimensionalElement extends Element {
 					!this.parent.parametricDimensions) throw new Error("Wrong parent");
 			this._parent = this.parent;
 			this.parent.dimensionalElements.push(this);
-			this.dimensionNeedsUpdate = true;
+			this.changedParameters = new Set(Object.keys(this.parent.parametricDimensions));
 			this.update();
 		});
 		this.addEventListener('removed', () => {
@@ -40,47 +40,104 @@ export class DimensionalElement extends Element {
 		group.add(group.right);
 	}
 
-	existsOnCurrentConfiguration() {
-		// TODO
-		return true;
-	}
+	expandDimensions(matches, changedParameters, overrideParameters) {
+		if (!overrideParameters) overrideParameters = {};
+		const parameters = {};
+		for (const key of Object.keys(this.parent.parametricDimensions)) {
+			parameters[key] = overrideParameters[key] !== undefined ? overrideParameters[key] : this.parent.parametricDimensions[key].gauge.value;
+		}
 
-	expandDimension(name, overrideParameters) {
-		if (!this.existsOnCurrentConfiguration()) throw new Error("This object doesn't exist on the current configration");
-		// TODO
-		//this.parent.parametricDimensions;
-		// throw new Error("Dimension " + name + " not found");
-		return this.dimensions[name];
-	}
+		const expressions = {};
+		let matchCount = 0;
+		let identical = true;
+		if (!matches) matches = [];
+		const setExpression = expression => {
+			if (identical) {
+				if (expression.id !== matches[matchCount]) identical = false;
+				matchCount++;
+			}
+			matches[matchCount] = expression.id;
+			let incomplete;
+			for (const key of Object.keys(this.parent.spatialDimensions)) {
+				if (expression.dimensions[key] !== undefined) {
+					if (expressions[key] !== undefined) console.warn("Overwriting expression. please adjust the stage definition.");
+					expressions[key] = expression.dimensions[key];
+				} else if (expressions[key] === undefined) {
+					incomplete = true;
+				}
+			}
+			Object.assign(parameters, expression.attributes);
+			if (expression.template) return incomplete && !matchExpression(expression.template);
+			return incomplete;
+		};
+		const matchExpression = object => {
+			const lists = [object];
+			const indexes = [];
+			let index = 0;
+			while (lists.length !== 0) {
+				const current = lists[index];
+				if (Array.isArray(current)) {
+					if (indexes[index] === undefined) indexes[index] = 0;
+					if (indexes[index] < current.length) {
+						const arm = current[indexes[index]];
+						indexes[index]++;
+						if (Array.isArray(arm)) {
+							if (arm[0].evaluate(parameters)) {
+								lists.push(arm[1]);
+								index++;
+							}
+						} else if (!arm.id) arm.evaluate(parameters);
+						else if (!setExpression(arm)) return true;
+						continue;
+					} else indexes[index] = 0;
+				} else if (!current) return false;
+				else if (!setExpression(current)) return true;
+				lists.pop();
+				index--;
+			};
+			return false;
+		};
+		if (!matchExpression(this.dimensions)) return null;
+		if (matchCount !== matches.length) identical = false;
 
-	expandDimensions(overrideParameters) {
-		for (const name of Object.keys(this.dimensions)) this.dimensionsExpanded[name] = this.expandDimension(name, overrideParameters);
-	}
-
-	getDimension(name, overrideParameters) {
-		if (!this.existsOnCurrentConfiguration()) throw new Error("This object doesn't exist on the current configration");
-		const value = this.dimensionsExpanded[name];
-		if (value !== undefined) return value;
-		return this.dimensionsExpanded[name] = this.expandDimension(name, overrideParameters);
+		if (identical) {
+			for (const key of Object.keys(expressions)) {
+				if (typeof expressions[key] !== "number") {
+					for (const usedVariable of expressions[key].variables()) {
+						if (changedParameters.has(usedVariable)) {
+							this.dimensionsExpanded[key] = expressions[key].evaluate(parameters);
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			for (const key of Object.keys(expressions)) {
+				this.dimensionsExpanded[key] = typeof expressions[key] === "number" ? expressions[key] : expressions[key].evaluate(parameters);
+			}
+		}
+		return matches;
 	}
 
 	update() {
-		if (this.dimensionNeedsUpdate) {
-			if (this.existsOnCurrentConfiguration()) {
-				this.expandDimensions();
-			}
+		if (this.changedParameters.size !== 0) {
+			this.matches = this.expandDimensions(this.matches);
+			this.changedParameters.clear();
+			this.depthNeedsUpdate = true;
+		}
+		if (this.depthNeedsUpdate) {
 			const updateVisual = () => {
-				if (this.existsOnCurrentConfiguration()) {
+				if (this.matches) {
 					// calculate depth
 					const diffs = [];
 					for (const k of Object.keys(this.parent.spatialDimensions)) {
 						if (k === this.parent.xaxis || k === this.parent.yaxis) continue;
-						diffs.push(this.parent.spatialDimensions[k].gauge.value - this.getDimension(k))
+						diffs.push(this.parent.spatialDimensions[k].gauge.value - this.dimensionsExpanded[k])
 					}
 					const depth = Math.hypot.apply(null, diffs) * VEILING_COEFFICIENT;
 
-					this.x = this.getDimension(this.parent.xaxis);
-					this.y = this.getDimension(this.parent.yaxis);
+					this.x = this.dimensionsExpanded[this.parent.xaxis];
+					this.y = this.dimensionsExpanded[this.parent.yaxis];
 
 					this.nativeContent.visible = depth < 1;
 					this.selfOpacity = 1 - depth;
@@ -95,7 +152,7 @@ export class DimensionalElement extends Element {
 				this.removeEventListener('render', updateVisual);
 			};
 			this.addEventListener('render', updateVisual);
-			this.dimensionNeedsUpdate = false;
+			this.depthNeedsUpdate = false;
 		}
 	}
 }
@@ -123,5 +180,20 @@ export class Foundation extends DimensionalElement {
 
 	updateColor(fillColor, depth) {
 		fillColor.setHSL(0, Math.max(0.3 - depth * 0.3, 0), 0.48);
+	}
+}
+
+export class Unit extends DimensionalElement {
+	constructor(options) {
+		super(options);
+		options = Object.assign({width: 24, height: 36, fillColor: "hsl(240, 50%, 60%)", strokeColor: "#ccc"}, options);
+
+		this.addContent(new SymmetricTriangle(options));
+
+		this.hslcomponents = this.nativeContent.left.fillColor.getHSL({});
+	}
+
+	updateColor(fillColor, depth) {
+		fillColor.setHSL(this.hslcomponents.h, Math.max(this.hslcomponents.s - depth * this.hslcomponents.s, 0), this.hslcomponents.l);
 	}
 }

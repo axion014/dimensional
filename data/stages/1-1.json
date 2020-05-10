@@ -1,0 +1,60 @@
+{
+	"x": "x",
+	"y": "y",
+	"spatialDimensions": {
+		"x": {"min": -500, "max": 500},
+		"y": {"min": -500, "max": 500}
+	},
+	"parametricDimensions": {
+		"time": {"min": 0, "max": 900}
+	},
+	"templates": {
+		"path1": [
+			"position = (time - timeoffset) * speed",
+			["position < 0", null],
+			["position < 8", {"x": "40 * position - 180", "y": 60}],
+			["position < 12", [
+				{"y": "-40 * SQRT1_2 * (position - 8) + 60"},
+				["position < 10", {"x": "40 * SQRT1_2 * (position - 8) + 140"}],
+				{"x": "-40 * SQRT1_2 * (position - 12) + 140"}
+			]],
+			["position < 15", {"x": "-40 * position + 620", "y": "-160 * SQRT1_2 + 60"}],
+			["position < 16", {"x": "-40 * SQRT1_2 * (position - 15) + 20", "y": "40 * SQRT1_2 * (position - 19) + 60"}]
+		]
+	},
+	"waypoints": [],
+	"foundations": [
+		{"x": -200, "y": -120},
+		{"x": 0, "y": -160},
+		{"x": -40, "y": 110},
+		[["time >= 350 and time <= 750", {"x": 180, "y": 210}]],
+		{"x": 40, "y": -10},
+		{"x": -100, "y": 160},
+		{"x": 125, "y": 0}
+	],
+	"units": [
+		{"x": 0, "y": 0, "player": true},
+		{"template": "path1", "timeoffset": 0, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 1, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 2, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 3, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 4, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 5, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 6, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 7, "speed": 1, "hp": 10},
+		{"template": "path1", "timeoffset": 10, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 10.5, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 11, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 11.5, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 12, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 12.5, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 13, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 13.5, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 14, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 14.5, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 15, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 15.5, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 16, "speed": 1, "hp": 8},
+		{"template": "path1", "timeoffset": 21, "speed": 1, "hp": 80}
+	]
+}

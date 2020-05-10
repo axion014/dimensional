@@ -10,7 +10,8 @@
   "author": "axion014",
   "license": "ISC",
   "dependencies": {
-    "fewd": "git+https://github.com/axion014/fewd.git",
+    "fewd": "npm:@doublequartz/fewd@^1.0.0-beta.2",
+    "mathjs": "^7.0.0",
     "three": "^0.115.0"
   },
   "devDependencies": {
